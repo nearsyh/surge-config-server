@@ -95,6 +95,10 @@ impl Proxy {
       _ => None,
     }
   }
+
+  fn to_str(&self) -> &str {
+    
+  }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -163,6 +167,10 @@ impl ProxyGroup {
       _ => None
     }
   }
+
+  fn to_str(&self) -> &str {
+
+  }
 }
 
 impl Default for SurgeConfiguration {
@@ -182,6 +190,38 @@ impl SurgeConfiguration {
   fn to_config(&self) -> String {
     let mut ret = String::new();
     ret.push_str(&self.head);
+    ret.push_str("\n");
+
+    ret.push_str("[General]");
+    for general in &self.general {
+      ret.push_str(&general);
+    }
+    ret.push_str("\n");
+
+    ret.push_str("[Proxy]");
+    for proxy in &self.proxies {
+      ret.push_str(proxy.to_str())
+    }
+    ret.push_str("\n");
+
+    ret.push_str("[Proxy Group]");
+    for proxy_group in &self.proxy_groups {
+      ret.push_str(proxy_group.to_str());
+    }
+    ret.push_str("\n");
+
+    ret.push_str("[Rule]");
+    for rule in &self.rules {
+      ret.push_str(&rule);
+    }
+    ret.push_str("\n");
+
+    ret.push_str("[URL Rewrite]");
+    for rewrite in &self.url_rewrites {
+      ret.push_str(&rewrite);
+    }
+    ret.push_str("\n");
+
     ret
   }
 }
@@ -266,5 +306,26 @@ mod test {
     surge_config.proxy_groups.push(ProxyGroup::from_str("AsianTV = select, Direct, Proxy, 🇭🇰 HK Standard A01 | Media | Rate 0.5x, 🇭🇰 HK Standard A02 | Media | Rate 0.5x").unwrap());
     surge_config.rules.push(String::from("DOMAIN-SUFFIX,gazellegames.net,DIRECT"));
     surge_config.url_rewrites.push(String::from("^https?://(www.)?g.cn https://www.google.com 302"));
+
+    let config = surge_config.to_config();
+    assert_eq!(r#"
+    !MANAGED-CONFIG https://abc.com
+
+    [General]
+    http-listen = 0.0.0.0:8888 
+
+    [Proxy]
+    🇭🇰 HK Standard A01 | Media | Rate 0.5x = ss,endpoint,447,encrypt-method=abc,password=ddd,obfs=abc,obfs-host=ddd,tfo=true
+
+    [Proxy Group]
+    AsianTV = select,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x
+    AsianTV = url-test,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x,url=http://www.qualcomm.cn/generate_204,interval=1800,tolerance=200
+
+    [Rule]
+    DOMAIN-SUFFIX,gazellegames.net,DIRECT
+
+    [URL Rewrite]
+    ^https?://(www.)?g.cn https://www.google.com 302
+    "#)
   }
 }
