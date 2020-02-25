@@ -43,7 +43,7 @@ impl Configuration {
 
 impl Into<SurgeConfiguration> for Configuration {
   fn into(self) -> SurgeConfiguration {
-    SurgeConfiguration {}
+    SurgeConfiguration::default()
   }
 }
 
