@@ -1,8 +1,8 @@
-mod models;
-
 use std::collections::HashMap;
 
-struct Configuration {
+use super::surge::SurgeConfiguration;
+
+pub struct Configuration {
   airports: Vec<AirportConfiguration>,
   rules: Vec<Rule>,
   group_configurations: Vec<GroupConfiguration>,
@@ -29,4 +29,34 @@ struct GroupConfiguration {
 
 struct GroupPattern {
   name_regex: String,
+}
+
+impl Configuration {
+  fn empty() -> Self {
+    Configuration {
+      airports: vec![],
+      rules: vec![],
+      group_configurations: vec![]
+    }
+  }
+}
+
+impl Into<SurgeConfiguration> for Configuration {
+  fn into(self) -> SurgeConfiguration {
+    SurgeConfiguration {}
+  }
+}
+
+#[cfg(test)]
+mod tests {
+
+  use super::Configuration;
+  use super::SurgeConfiguration;
+
+  #[test]
+  fn to_surge_configuration_works() {
+      let configuration = Configuration::empty();
+      let surge_configuration: SurgeConfiguration = configuration.into();
+      println!("{:?}", surge_configuration);
+  }
 }

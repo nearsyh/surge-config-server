@@ -1,3 +1,4 @@
+mod models;
 use actix_web::{get, web, App, Error, HttpResponse, HttpServer, Responder, Result};
 
 #[get("/health")]
