@@ -296,7 +296,19 @@ mod test {
 
   #[test]
   pub fn https_proxy_to_string_should_work() {
-    
+    let mut params = BTreeMap::new();
+    params.insert(String::from("abd"), String::from("def"));
+    params.insert(String::from("abc"), String::from("def"));
+    let proxy = Proxy {
+      name: String::from("https proxy"),
+      proto: String::from("https"),
+      host: String::from("www.a.com"),
+      port: 447,
+      username: Some(String::from("abc")),
+      password: Some(String::from("def")),
+      parameters: params
+    };
+    assert_eq!(proxy.to_string(), "https proxy = https,www.a.com,447,abc,def,abc=def,abd=def");
   }
 
   #[test]
@@ -353,6 +365,6 @@ mod test {
 
     [URL Rewrite]
     ^https?://(www.)?g.cn https://www.google.com 302
-    "#)
+    "#);
   }
 }
