@@ -159,6 +159,28 @@ impl ProxyGroupType {
   }
 }
 
+impl ToString for ProxyGroupType {
+  fn to_string(&self) -> String {
+    let mut ret = String::new();
+    if let ProxyGroupType::UrlTest {
+      url,
+      interval,
+      tolerance,
+      timeout,
+    } = self
+    {
+      ret.push_str(&format!(
+        "url={url},interval={interval},tolerance={tolerance},timeout={timeout}",
+        url = url,
+        interval = interval,
+        tolerance = tolerance,
+        timeout = timeout
+      ));
+    }
+    ret
+  }
+}
+
 #[derive(Debug)]
 struct ProxyGroup {
   name: String,
@@ -184,14 +206,30 @@ impl ProxyGroup {
     let components: Vec<_> = proxy_group.splitn(2, "=").collect();
     match &components[..] {
       [name, definition] => ProxyGroup::from_name_definition(name.trim(), *definition),
-      _ => None
+      _ => None,
     }
   }
 }
 
 impl ToString for ProxyGroup {
   fn to_string(&self) -> String {
-    String::new()
+    let mut ret = String::new();
+
+    ret.push_str(&self.name);
+    ret.push_str(" = ");
+    match &self.group_type {
+      ProxyGroupType::Select => {
+        ret.push_str("select,");
+        ret.push_str(&self.proxy_names.join(","));
+      }
+      url_test @ ProxyGroupType::UrlTest { .. } => {
+        ret.push_str("url-test,");
+        ret.push_str(&self.proxy_names.join(","));
+        ret.push_str(",");
+        ret.push_str(&url_test.to_string());
+      }
+    }
+    ret
   }
 }
 
@@ -209,42 +247,46 @@ impl Default for SurgeConfiguration {
 }
 
 impl SurgeConfiguration {
-  fn to_config(&self) -> String {
+  fn vec_as_string<T: ToString>(head: &str, vec: &Vec<T>) -> String {
     let mut ret = String::new();
-    ret.push_str(&self.head);
-    ret.push_str("\n");
-
-    ret.push_str("[General]");
-    for general in &self.general {
-      ret.push_str(&general);
-    }
-    ret.push_str("\n");
-
-    ret.push_str("[Proxy]");
-    for proxy in &self.proxies {
-      ret.push_str(&proxy.to_string())
-    }
-    ret.push_str("\n");
-
-    ret.push_str("[Proxy Group]");
-    for proxy_group in &self.proxy_groups {
-      ret.push_str(&proxy_group.to_string());
-    }
-    ret.push_str("\n");
-
-    ret.push_str("[Rule]");
-    for rule in &self.rules {
-      ret.push_str(&rule);
-    }
-    ret.push_str("\n");
-
-    ret.push_str("[URL Rewrite]");
-    for rewrite in &self.url_rewrites {
-      ret.push_str(&rewrite);
-    }
-    ret.push_str("\n");
-
+    ret.push_str(head);
+    ret.push('\n');
+    ret.push_str(&vec.iter().map(|elem| elem.to_string()).collect::<Vec<String>>().join("\n"));
     ret
+  }
+
+  fn general_as_string(&self) -> String {
+    SurgeConfiguration::vec_as_string("[General]", &self.general)
+  }
+
+  fn proxy_as_string(&self) -> String {
+    SurgeConfiguration::vec_as_string("[Proxy]", &self.proxies)
+  }
+
+  fn proxy_group_as_string(&self) -> String {
+    SurgeConfiguration::vec_as_string("[Proxy Group]", &self.proxy_groups)
+  }
+
+  fn rule_as_string(&self) -> String {
+    SurgeConfiguration::vec_as_string("[Rule]", &self.rules)
+  }
+
+  fn url_rewrite_as_string(&self) -> String {
+    SurgeConfiguration::vec_as_string("[URL Rewrite]", &self.url_rewrites)
+  }
+}
+
+impl ToString for SurgeConfiguration {
+  fn to_string(&self) -> String {
+    [
+      &*self.head,
+      &*self.general_as_string(),
+      &*self.proxy_as_string(),
+      &*self.proxy_group_as_string(),
+      &*self.rule_as_string(),
+      &*self.url_rewrite_as_string(),
+    ]
+    .join("\n\n")
   }
 }
 
@@ -306,9 +348,12 @@ mod test {
       port: 447,
       username: Some(String::from("abc")),
       password: Some(String::from("def")),
-      parameters: params
+      parameters: params,
     };
-    assert_eq!(proxy.to_string(), "https proxy = https,www.a.com,447,abc,def,abc=def,abd=def");
+    assert_eq!(
+      proxy.to_string(),
+      "https proxy = https,www.a.com,447,abc,def,abc=def,abd=def"
+    );
   }
 
   #[test]
@@ -317,7 +362,15 @@ mod test {
       .expect("Parsing should work");
     assert_eq!(proxy_group.name, "AsianTV");
     assert_eq!(proxy_group.group_type, ProxyGroupType::Select);
-    assert_eq!(proxy_group.proxy_names, vec!["Direct", "Proxy", "🇭🇰 HK Standard A01 | Media | Rate 0.5x", "🇭🇰 HK Standard A02 | Media | Rate 0.5x"])
+    assert_eq!(
+      proxy_group.proxy_names,
+      vec![
+        "Direct",
+        "Proxy",
+        "🇭🇰 HK Standard A01 | Media | Rate 0.5x",
+        "🇭🇰 HK Standard A02 | Media | Rate 0.5x"
+      ]
+    )
   }
 
   #[test]
@@ -325,13 +378,24 @@ mod test {
     let proxy_group = ProxyGroup::from_str("AsianTV = url-test, Direct, Proxy, 🇭🇰 HK Standard A01 | Media | Rate 0.5x, 🇭🇰 HK Standard A02 | Media | Rate 0.5x, url = http://www.qualcomm.cn/generate_204, interval = 1800, tolerance = 200")
       .expect("Parsing should work");
     assert_eq!(proxy_group.name, "AsianTV");
-    assert_eq!(proxy_group.group_type, ProxyGroupType::UrlTest {
-      url: String::from("http://www.qualcomm.cn/generate_204"),
-      interval: 1800,
-      tolerance: 200,
-      timeout: 5
-    });
-    assert_eq!(proxy_group.proxy_names, vec!["Direct", "Proxy", "🇭🇰 HK Standard A01 | Media | Rate 0.5x", "🇭🇰 HK Standard A02 | Media | Rate 0.5x"])
+    assert_eq!(
+      proxy_group.group_type,
+      ProxyGroupType::UrlTest {
+        url: String::from("http://www.qualcomm.cn/generate_204"),
+        interval: 1800,
+        tolerance: 200,
+        timeout: 5
+      }
+    );
+    assert_eq!(
+      proxy_group.proxy_names,
+      vec![
+        "Direct",
+        "Proxy",
+        "🇭🇰 HK Standard A01 | Media | Rate 0.5x",
+        "🇭🇰 HK Standard A02 | Media | Rate 0.5x"
+      ]
+    )
   }
 
   #[test]
@@ -343,28 +407,34 @@ mod test {
       .push(String::from("http-listen = 0.0.0.0:8888"));
     surge_config.proxies.push(Proxy::from_str("🇭🇰 HK Standard A01 | Media | Rate 0.5x = ss, endpoint, 447, encrypt-method=abc, password=ddd, obfs=abc,obfs-host=ddd, tfo=true").unwrap());
     surge_config.proxy_groups.push(ProxyGroup::from_str("AsianTV = select, Direct, Proxy, 🇭🇰 HK Standard A01 | Media | Rate 0.5x, 🇭🇰 HK Standard A02 | Media | Rate 0.5x").unwrap());
-    surge_config.rules.push(String::from("DOMAIN-SUFFIX,gazellegames.net,DIRECT"));
-    surge_config.url_rewrites.push(String::from("^https?://(www.)?g.cn https://www.google.com 302"));
+    surge_config.proxy_groups.push(ProxyGroup::from_str("AsianTV = url-test, Direct, Proxy, 🇭🇰 HK Standard A01 | Media | Rate 0.5x, 🇭🇰 HK Standard A02 | Media | Rate 0.5x, url = http://www.qualcomm.cn/generate_204, interval = 1800, tolerance = 200").unwrap());
+    surge_config
+      .rules
+      .push(String::from("DOMAIN-SUFFIX,gazellegames.net,DIRECT"));
+    surge_config.url_rewrites.push(String::from(
+      "^https?://(www.)?g.cn https://www.google.com 302",
+    ));
 
-    let config = surge_config.to_config();
-    assert_eq!(config, r#"
-    !MANAGED-CONFIG https://abc.com
+    let config = surge_config.to_string();
+    assert_eq!(
+      config,
+      r#"!MANAGED-CONFIG https://abc.com
 
-    [General]
-    http-listen = 0.0.0.0:8888 
+[General]
+http-listen = 0.0.0.0:8888
 
-    [Proxy]
-    🇭🇰 HK Standard A01 | Media | Rate 0.5x = ss,endpoint,447,encrypt-method=abc,password=ddd,obfs=abc,obfs-host=ddd,tfo=true
+[Proxy]
+🇭🇰 HK Standard A01 | Media | Rate 0.5x = ss,endpoint,447,encrypt-method=abc,obfs=abc,obfs-host=ddd,password=ddd,tfo=true
 
-    [Proxy Group]
-    AsianTV = select,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x
-    AsianTV = url-test,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x,url=http://www.qualcomm.cn/generate_204,interval=1800,tolerance=200
+[Proxy Group]
+AsianTV = select,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x
+AsianTV = url-test,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x,url=http://www.qualcomm.cn/generate_204,interval=1800,tolerance=200,timeout=5
 
-    [Rule]
-    DOMAIN-SUFFIX,gazellegames.net,DIRECT
+[Rule]
+DOMAIN-SUFFIX,gazellegames.net,DIRECT
 
-    [URL Rewrite]
-    ^https?://(www.)?g.cn https://www.google.com 302
-    "#);
+[URL Rewrite]
+^https?://(www.)?g.cn https://www.google.com 302"#
+    );
   }
 }

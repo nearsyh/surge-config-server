@@ -9,3 +9,4 @@ Check [the design doc](https://docs.google.com/document/d/1ORzHgMCApUwCze0hfFEY3
 ### Refactor
 
 [] Maybe use `&str` instead of `String`?
+[] Use `format!` more
