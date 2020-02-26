@@ -100,18 +100,18 @@ impl Proxy {
 impl ToString for Proxy {
   fn to_string(&self) -> String {
     let mut ret = String::new();
-    let mut definition_parts: Vec<&str> = vec![];
-    definition_parts.push(&self.proto);
-    definition_parts.push(&self.host);
-    definition_parts.push(&self.port.to_string());
+    let mut definition_parts: Vec<String> = vec![];
+    definition_parts.push(self.proto.clone());
+    definition_parts.push(self.host.clone());
+    definition_parts.push(self.port.to_string());
     if let Some(ref username_str) = &self.username {
-      definition_parts.push(username_str);
+      definition_parts.push(username_str.clone());
     }
     if let Some(ref password_str) = &self.password {
-      definition_parts.push(password_str);
+      definition_parts.push(password_str.clone());
     }
     for (name, value) in &self.parameters {
-      definition_parts.push(&[name, "=", value].concat());
+      definition_parts.push([name, "=", value].concat());
     }
 
     ret.push_str(&self.name);
@@ -347,7 +347,7 @@ mod test {
     surge_config.url_rewrites.push(String::from("^https?://(www.)?g.cn https://www.google.com 302"));
 
     let config = surge_config.to_config();
-    assert_eq!(r#"
+    assert_eq!(config, r#"
     !MANAGED-CONFIG https://abc.com
 
     [General]
