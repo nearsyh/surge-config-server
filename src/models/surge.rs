@@ -20,6 +20,46 @@ fn string_vec_from_strs(elems: &[&str]) -> Vec<String> {
     .collect()
 }
 
+fn object_vec<T, F>(lines: &Vec<&str>, start: usize, transformer: F) -> (Vec<T>, usize)
+where
+  F: Fn(&str) -> Option<T>,
+{
+  let mut start = start + 1;
+  let mut ret = vec![];
+  while let Some(line) = lines.get(start) {
+    if is_section_head(line) {
+      break;
+    } else if let Some(obj) = transformer(*line) {
+      ret.push(obj);
+    }
+    start += 1;
+  }
+  (ret, start)
+}
+
+fn string_vec(lines: &Vec<&str>, start: usize) -> (Vec<String>, usize) {
+  let mut start = start + 1;
+  let mut ret = vec![];
+  while let Some(line) = lines.get(start) {
+    if is_section_head(line) {
+      break;
+    } else {
+      ret.push(String::from(*line));
+    }
+    start += 1;
+  }
+  println!("string_vec {}", start);
+  (ret, start)
+}
+
+fn is_section_head(line: &str) -> bool {
+  match line {
+    "[General]" | "[Proxy]" | "[Proxy Group]" | "[Rule]" | "[URL Rewrite]" => true,
+    l if l.starts_with("[") => true,
+    _ => false,
+  }
+}
+
 #[derive(Debug)]
 pub struct SurgeConfiguration {
   head: String,
@@ -247,11 +287,75 @@ impl Default for SurgeConfiguration {
 }
 
 impl SurgeConfiguration {
+  pub async fn from_url(url: &str) -> Option<SurgeConfiguration> {
+    use reqwest;
+    match reqwest::get(url).await {
+      Ok(response) => match response.text().await {
+        Ok(text) => SurgeConfiguration::from_config_string(&text),
+        _ => None,
+      },
+      _ => None,
+    }
+  }
+
+  fn from_config_string(config: &str) -> Option<SurgeConfiguration> {
+    let lines: Vec<&str> = config.split("\n").collect();
+    let mut current_line_number = 0;
+    let mut configuration = SurgeConfiguration::default();
+    while let Some(line) = lines.get(current_line_number) {
+      println!("{} {}", current_line_number, line);
+      match line {
+        &"[General]" => {
+          let (general, next_line) = string_vec(&lines, current_line_number);
+          configuration.general = general;
+          current_line_number = next_line;
+        }
+        &"[Proxy]" => {
+          let (proxies, next_line) =
+            object_vec(&lines, current_line_number, |line| Proxy::from_str(line));
+          configuration.proxies = proxies;
+          current_line_number = next_line;
+        }
+        &"[Proxy Group]" => {
+          let (proxy_groups, next_line) = object_vec(&lines, current_line_number, |line| {
+            ProxyGroup::from_str(line)
+          });
+          configuration.proxy_groups = proxy_groups;
+          current_line_number = next_line;
+        }
+        &"[Rule]" => {
+          let (rules, next_line) = string_vec(&lines, current_line_number);
+          configuration.rules = rules;
+          current_line_number = next_line;
+        }
+        &"[URL Rewrite]" => {
+          let (url_rewrites, next_line) = string_vec(&lines, current_line_number);
+          configuration.url_rewrites = url_rewrites;
+          current_line_number = next_line;
+        }
+        l if l.starts_with("#!") => {
+          configuration.head = String::from(*l);
+          current_line_number = current_line_number + 1;
+        }
+        _ => {
+          current_line_number = current_line_number + 1;
+        }
+      }
+    }
+    Some(configuration)
+  }
+
   fn vec_as_string<T: ToString>(head: &str, vec: &Vec<T>) -> String {
     let mut ret = String::new();
     ret.push_str(head);
     ret.push('\n');
-    ret.push_str(&vec.iter().map(|elem| elem.to_string()).collect::<Vec<String>>().join("\n"));
+    ret.push_str(
+      &vec
+        .iter()
+        .map(|elem| elem.to_string())
+        .collect::<Vec<String>>()
+        .join("\n"),
+    );
     ret
   }
 
@@ -436,5 +540,12 @@ DOMAIN-SUFFIX,gazellegames.net,DIRECT
 [URL Rewrite]
 ^https?://(www.)?g.cn https://www.google.com 302"#
     );
+  }
+
+  #[tokio::test]
+  pub async fn surge_config_from_external_should_work() {
+    SurgeConfiguration::from_url("https://api.pay.pm/link/cem4OCGDaRUuOEQe?surge=3&managed=1")
+      .await
+      .unwrap();
   }
 }
