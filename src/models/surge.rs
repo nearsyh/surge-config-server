@@ -189,7 +189,7 @@ impl ProxyGroup {
   }
 }
 
-impl ToString for ProxyGroupType {
+impl ToString for ProxyGroup {
   fn to_string(&self) -> String {
     String::new()
   }
@@ -228,7 +228,7 @@ impl SurgeConfiguration {
 
     ret.push_str("[Proxy Group]");
     for proxy_group in &self.proxy_groups {
-      ret.push_str(proxy_group.to_string());
+      ret.push_str(&proxy_group.to_string());
     }
     ret.push_str("\n");
 
