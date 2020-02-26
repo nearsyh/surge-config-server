@@ -27,12 +27,16 @@ where
   let mut start = start + 1;
   let mut ret = vec![];
   while let Some(line) = lines.get(start) {
+    let line = line.trim();
     if is_section_head(line) {
       break;
-    } else if let Some(obj) = transformer(*line) {
-      ret.push(obj);
     }
     start += 1;
+    if line.is_empty() || is_comment(line) {
+      continue;
+    } else if let Some(obj) = transformer(line) {
+      ret.push(obj);
+    }
   }
   (ret, start)
 }
@@ -41,12 +45,14 @@ fn string_vec(lines: &Vec<&str>, start: usize) -> (Vec<String>, usize) {
   let mut start = start + 1;
   let mut ret = vec![];
   while let Some(line) = lines.get(start) {
+    let line = line.trim();
     if is_section_head(line) {
       break;
-    } else {
-      ret.push(String::from(*line));
     }
     start += 1;
+    if !line.is_empty() && !is_comment(line) {
+      ret.push(String::from(line));
+    }
   }
   println!("string_vec {}", start);
   (ret, start)
@@ -58,6 +64,10 @@ fn is_section_head(line: &str) -> bool {
     l if l.starts_with("[") => true,
     _ => false,
   }
+}
+
+fn is_comment(line: &str) -> bool {
+  line.starts_with("//")
 }
 
 #[derive(Debug)]
@@ -543,9 +553,32 @@ DOMAIN-SUFFIX,gazellegames.net,DIRECT
   }
 
   #[tokio::test]
-  pub async fn surge_config_from_external_should_work() {
-    SurgeConfiguration::from_url("https://api.pay.pm/link/cem4OCGDaRUuOEQe?surge=3&managed=1")
-      .await
+  pub async fn surge_config_from_string_should_work() {
+    let surge_config = SurgeConfiguration::from_config_string(
+      r#"#!MANAGED-CONFIG https://abc.com
+
+[General]
+http-listen = 0.0.0.0:8888
+
+[Proxy]
+🇭🇰 HK Standard A01 | Media | Rate 0.5x = ss,endpoint,447,encrypt-method=abc,obfs=abc,obfs-host=ddd,password=ddd,tfo=true
+🇭🇰 HK Standard A02 | Media | Rate 0.5x = ss,endpoint,447,encrypt-method=abc,obfs=abc,obfs-host=ddd,password=ddd,tfo=true
+
+[Proxy Group]
+AsianTV = select,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x
+AsianTV = url-test,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x,url=http://www.qualcomm.cn/generate_204,interval=1800,tolerance=200,timeout=5
+
+[Rule]
+DOMAIN-SUFFIX,gazellegames.net,DIRECT
+
+[URL Rewrite]
+^https?://(www.)?g.cn https://www.google.com 302"#)
       .unwrap();
+    assert_eq!(surge_config.head, "#!MANAGED-CONFIG https://abc.com");
+    assert_eq!(surge_config.general.len(), 1);
+    assert_eq!(surge_config.proxies.len(), 2);
+    assert_eq!(surge_config.proxy_groups.len(), 2);
+    assert_eq!(surge_config.rules.len(), 1);
+    assert_eq!(surge_config.url_rewrites.len(), 1);
   }
 }
