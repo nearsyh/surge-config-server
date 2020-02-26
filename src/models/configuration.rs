@@ -4,7 +4,7 @@ use super::surge::SurgeConfiguration;
 
 pub struct Configuration {
   airports: HashMap<String, AirportConfiguration>,
-  rules: String, 
+  rules: String,
   group_configurations: HashMap<String, GroupConfiguration>,
 }
 
@@ -18,14 +18,22 @@ impl Configuration {
   }
 
   fn upsert_group_configuration(&mut self, config: GroupConfiguration) {
-    self.group_configurations.insert(config.group_id.clone(), config);
+    self
+      .group_configurations
+      .insert(config.group_id.clone(), config);
   }
 }
 
 struct AirportConfiguration {
   airport_id: String,
   airport_name: String,
-  url: String
+  url: String,
+}
+
+impl AirportConfiguration {
+  async fn fetch_surge_configuration(&self) -> Option<SurgeConfiguration> {
+    SurgeConfiguration::from_url(&self.url).await
+  }
 }
 
 struct GroupConfiguration {
@@ -43,14 +51,20 @@ impl Configuration {
     Configuration {
       airports: HashMap::new(),
       rules: String::new(),
-      group_configurations: HashMap::new()
+      group_configurations: HashMap::new(),
     }
   }
 }
 
-impl Into<SurgeConfiguration> for Configuration {
-  fn into(self) -> SurgeConfiguration {
-
+impl Configuration {
+  async fn fetch_surge_configuration(&self) -> Option<SurgeConfiguration> {
+    let surge_configurations: HashMap<String, SurgeConfiguration> = self
+      .airports
+      .iter()
+      .map(async move |(id, airport_config)| (id.clone(), airport_config.fetch_surge_configuration().await?))
+      // .filter(|(_, surge_config_opt)| surge_config_opt.is_some())
+      // .map(|(id, surge_config_opt)| (id, surge_config_opt.unwrap()))
+      .collect();
     SurgeConfiguration::default()
   }
 }
@@ -63,8 +77,8 @@ mod tests {
 
   #[test]
   fn to_surge_configuration_works() {
-      let configuration = Configuration::empty();
-      let surge_configuration: SurgeConfiguration = configuration.into();
-      println!("{:?}", surge_configuration);
+    let configuration = Configuration::empty();
+    let surge_configuration: SurgeConfiguration = (&configuration).into();
+    println!("{:?}", surge_configuration);
   }
 }

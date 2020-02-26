@@ -297,7 +297,6 @@ impl Default for SurgeConfiguration {
 
 impl SurgeConfiguration {
   pub async fn from_url(url: &str) -> Option<SurgeConfiguration> {
-    use reqwest;
     match reqwest::get(url).await {
       Ok(response) => match response.text().await {
         Ok(text) => SurgeConfiguration::from_config_string(&text),
