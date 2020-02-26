@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
-fn params_map_from_strs(entries: &[&str]) -> HashMap<String, String> {
-  let mut ret = HashMap::new();
+fn params_map_from_strs(entries: &[&str]) -> BTreeMap<String, String> {
+  let mut ret = BTreeMap::new();
   for entry in entries {
     if entry.contains("=") {
       if let [name, value] = &entry.split("=").collect::<Vec<_>>()[..] {
@@ -38,7 +38,7 @@ struct Proxy {
   port: u32,
   username: Option<String>,
   password: Option<String>,
-  parameters: HashMap<String, String>,
+  parameters: BTreeMap<String, String>,
 }
 
 impl Proxy {
@@ -95,9 +95,29 @@ impl Proxy {
       _ => None,
     }
   }
+}
 
-  fn to_str(&self) -> &str {
-    
+impl ToString for Proxy {
+  fn to_string(&self) -> String {
+    let mut ret = String::new();
+    let mut definition_parts: Vec<&str> = vec![];
+    definition_parts.push(&self.proto);
+    definition_parts.push(&self.host);
+    definition_parts.push(&self.port.to_string());
+    if let Some(ref username_str) = &self.username {
+      definition_parts.push(username_str);
+    }
+    if let Some(ref password_str) = &self.password {
+      definition_parts.push(password_str);
+    }
+    for (name, value) in &self.parameters {
+      definition_parts.push(&[name, "=", value].concat());
+    }
+
+    ret.push_str(&self.name);
+    ret.push_str(" = ");
+    ret.push_str(&definition_parts.join(","));
+    ret
   }
 }
 
@@ -113,7 +133,7 @@ enum ProxyGroupType {
 }
 
 impl ProxyGroupType {
-  fn from_str(type_str: &str, params_map: &HashMap<String, String>) -> Option<ProxyGroupType> {
+  fn from_str(type_str: &str, params_map: &BTreeMap<String, String>) -> Option<ProxyGroupType> {
     match type_str.trim() {
       "select" => Some(ProxyGroupType::Select),
       "url-test" => Some(ProxyGroupType::UrlTest {
@@ -167,9 +187,11 @@ impl ProxyGroup {
       _ => None
     }
   }
+}
 
-  fn to_str(&self) -> &str {
-
+impl ToString for ProxyGroupType {
+  fn to_string(&self) -> String {
+    String::new()
   }
 }
 
@@ -200,13 +222,13 @@ impl SurgeConfiguration {
 
     ret.push_str("[Proxy]");
     for proxy in &self.proxies {
-      ret.push_str(proxy.to_str())
+      ret.push_str(&proxy.to_string())
     }
     ret.push_str("\n");
 
     ret.push_str("[Proxy Group]");
     for proxy_group in &self.proxy_groups {
-      ret.push_str(proxy_group.to_str());
+      ret.push_str(proxy_group.to_string());
     }
     ret.push_str("\n");
 
@@ -270,6 +292,11 @@ mod test {
     assert_eq!(proxy.parameters.get("obfs").unwrap(), "abc");
     assert_eq!(proxy.parameters.get("obfs-host").unwrap(), "ddd");
     assert_eq!(proxy.parameters.get("tfo").unwrap(), "true");
+  }
+
+  #[test]
+  pub fn https_proxy_to_string_should_work() {
+    
   }
 
   #[test]
