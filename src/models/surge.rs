@@ -54,7 +54,6 @@ fn string_vec(lines: &Vec<&str>, start: usize) -> (Vec<String>, usize) {
       ret.push(String::from(line));
     }
   }
-  println!("string_vec {}", start);
   (ret, start)
 }
 
@@ -313,7 +312,6 @@ impl SurgeConfiguration {
     let mut current_line_number = 0;
     let mut configuration = SurgeConfiguration::default();
     while let Some(line) = lines.get(current_line_number) {
-      println!("{} {}", current_line_number, line);
       match line {
         &"[General]" => {
           let (general, next_line) = string_vec(&lines, current_line_number);
