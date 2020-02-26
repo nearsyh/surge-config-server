@@ -3,22 +3,29 @@ use std::collections::HashMap;
 use super::surge::SurgeConfiguration;
 
 pub struct Configuration {
-  airports: Vec<AirportConfiguration>,
-  rules: Vec<Rule>,
-  group_configurations: Vec<GroupConfiguration>,
+  airports: HashMap<String, AirportConfiguration>,
+  rules: String, 
+  group_configurations: HashMap<String, GroupConfiguration>,
+}
+
+impl Configuration {
+  fn upsert_airport_configuration(&mut self, config: AirportConfiguration) {
+    self.airports.insert(config.airport_id.clone(), config);
+  }
+
+  fn update_rules(&mut self, rules: String) {
+    self.rules = rules;
+  }
+
+  fn upsert_group_configuration(&mut self, config: GroupConfiguration) {
+    self.group_configurations.insert(config.group_id.clone(), config);
+  }
 }
 
 struct AirportConfiguration {
   airport_id: String,
   airport_name: String,
   url: String
-}
-
-struct Rule {
-  rule_id: String,
-  rule_name: String,
-  rule: String,
-  order: u32
 }
 
 struct GroupConfiguration {
@@ -34,15 +41,16 @@ struct GroupPattern {
 impl Configuration {
   fn empty() -> Self {
     Configuration {
-      airports: vec![],
-      rules: vec![],
-      group_configurations: vec![]
+      airports: HashMap::new(),
+      rules: String::new(),
+      group_configurations: HashMap::new()
     }
   }
 }
 
 impl Into<SurgeConfiguration> for Configuration {
   fn into(self) -> SurgeConfiguration {
+
     SurgeConfiguration::default()
   }
 }
