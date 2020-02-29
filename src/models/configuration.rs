@@ -1,3 +1,4 @@
+use futures;
 use std::collections::HashMap;
 
 use super::surge::SurgeConfiguration;
@@ -58,27 +59,77 @@ impl Configuration {
 
 impl Configuration {
   async fn fetch_surge_configuration(&self) -> Option<SurgeConfiguration> {
-    let surge_configurations: HashMap<String, SurgeConfiguration> = self
+    let config_futures: Vec<_> = self
       .airports
-      .iter()
-      .map(async move |(id, airport_config)| (id.clone(), airport_config.fetch_surge_configuration().await?))
-      // .filter(|(_, surge_config_opt)| surge_config_opt.is_some())
-      // .map(|(id, surge_config_opt)| (id, surge_config_opt.unwrap()))
+      .values()
+      .map(|airport_config| airport_config.fetch_surge_configuration())
       .collect();
-    SurgeConfiguration::default()
+    let surge_configurations: Vec<_> = futures::future::join_all(config_futures)
+      .await
+      .iter()
+      .filter(|option| option.is_some())
+      .map(|option| option.as_ref().unwrap().clone())
+      .collect();
+    match Configuration::merge_surge_configurations(&surge_configurations[..]) {
+      Some(mut surge_configuration) => {
+        self.populate_surge_configuration(&mut surge_configuration);
+        Some(surge_configuration)
+      },
+      _ => None
+    }
+  }
+
+  fn populate_surge_configuration(&self, surge_configuration : &mut SurgeConfiguration) {
+    surge_configuration.set_head(String::from(""));
+    for rule in self.rules.split("\n") {
+      let clean_rule = rule.trim();
+      if !clean_rule.is_empty() {
+        surge_configuration.add_rule(String::from(clean_rule));
+      }
+    }
+  }
+
+  fn merge_surge_configurations(
+    surge_configurations: &[SurgeConfiguration],
+  ) -> Option<SurgeConfiguration> {
+    if surge_configurations.is_empty() {
+      return None;
+    }
+
+    let mut ret = SurgeConfiguration::default();
+    for config in surge_configurations {
+      ret.merge(config);
+    }
+    Some(ret)
   }
 }
 
 #[cfg(test)]
 mod tests {
 
-  use super::Configuration;
-  use super::SurgeConfiguration;
+  use super::*;
 
-  #[test]
-  fn to_surge_configuration_works() {
+  #[tokio::test]
+  async fn empty_config_to_surge_configuration_works() {
     let configuration = Configuration::empty();
-    let surge_configuration: SurgeConfiguration = (&configuration).into();
-    println!("{:?}", surge_configuration);
+    let surge_configuration_opt = configuration.fetch_surge_configuration().await;
+    assert!(surge_configuration_opt.is_none());
+  }
+
+  #[tokio::test]
+  async fn config_to_surge_configuration_works() {
+    let mut configuration = Configuration::empty();
+    configuration.upsert_airport_configuration(AirportConfiguration {
+      airport_id: String::from("airport_1"),
+      airport_name: String::from("airport_1_name"),
+      url: String::from("https://gist.githubusercontent.com/nearsyh/b581e7fa0f007d104336fad5ac124be7/raw/eaee43c88afe03758ea2cc118c376a3c800689ac/surge_config_airport_1")
+    });
+    configuration.upsert_airport_configuration(AirportConfiguration {
+      airport_id: String::from("airport_2"),
+      airport_name: String::from("airport_2_name"),
+      url: String::from("https://gist.githubusercontent.com/nearsyh/45695b3332f02609c71a1a084dbfb5bf/raw/67c0c6b1ae2c5a8f044a5f7ea10d009c990c5469/surge_config_airport_2")
+    });
+    let surge_configuration = configuration.fetch_surge_configuration().await.unwrap();
+    assert_eq!(surge_configuration.get_proxies().len(), 4);
   }
 }

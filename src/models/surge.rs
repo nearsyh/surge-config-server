@@ -69,7 +69,7 @@ fn is_comment(line: &str) -> bool {
   line.starts_with("//")
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SurgeConfiguration {
   head: String,
   general: Vec<String>,
@@ -79,8 +79,8 @@ pub struct SurgeConfiguration {
   url_rewrites: Vec<String>,
 }
 
-#[derive(Debug)]
-struct Proxy {
+#[derive(Debug, Clone)]
+pub struct Proxy {
   name: String,
   proto: String,
   host: String,
@@ -131,6 +131,9 @@ impl Proxy {
 
   fn from_name_definition(name: &str, definition: &str) -> Option<Proxy> {
     let def_parts: Vec<_> = definition.split(",").collect();
+    if def_parts[0].trim() == "direct" {
+      return None;
+    }
     match &def_parts[0..3] {
       [proto, host, port_str] => Proxy::from_strs(name, *proto, *host, *port_str, &def_parts[3..]),
       _ => None,
@@ -170,7 +173,7 @@ impl ToString for Proxy {
   }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum ProxyGroupType {
   Select,
   UrlTest {
@@ -230,7 +233,7 @@ impl ToString for ProxyGroupType {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ProxyGroup {
   name: String,
   group_type: ProxyGroupType,
@@ -384,6 +387,35 @@ impl SurgeConfiguration {
 
   fn url_rewrite_as_string(&self) -> String {
     SurgeConfiguration::vec_as_string("[URL Rewrite]", &self.url_rewrites)
+  }
+
+  pub fn merge(&mut self, config: &SurgeConfiguration) {
+    self.proxies.append(&mut config.proxies.clone());
+  }
+
+  pub fn set_head(&mut self, head: String) {
+    self.head = head;
+  }
+
+  pub fn add_general(&mut self, general: String) {
+    self.general.push(general);
+  }
+
+  pub fn add_proxy_group(&mut self, proxy_group: ProxyGroup) {
+    self.proxy_groups.push(proxy_group);
+  }
+
+  pub fn add_rule(&mut self, rule: String) {
+    self.rules.push(rule);
+  }
+
+  pub fn add_url_rewrite(&mut self, url_rewrite: String) {
+    self.url_rewrites.push(url_rewrite);
+  }
+
+  #[cfg(test)]
+  pub fn get_proxies(&self) -> &Vec<Proxy> {
+    &self.proxies
   }
 }
 
@@ -577,5 +609,20 @@ DOMAIN-SUFFIX,gazellegames.net,DIRECT
     assert_eq!(surge_config.proxy_groups.len(), 2);
     assert_eq!(surge_config.rules.len(), 1);
     assert_eq!(surge_config.url_rewrites.len(), 1);
+  }
+
+  #[tokio::test]
+  pub async fn surge_config_from_url_should_work() {
+    let surge_config = SurgeConfiguration::from_url("https://gist.githubusercontent.com/nearsyh/45695b3332f02609c71a1a084dbfb5bf/raw/67c0c6b1ae2c5a8f044a5f7ea10d009c990c5469/surge_config_airport_2")
+      .await
+      .unwrap();
+    assert_eq!(surge_config.head, "#!MANAGED-CONFIG http://airport.com/2 interval=1234");
+    assert_eq!(surge_config.general.len(), 1);
+    assert_eq!(surge_config.general[0], "http-listen = 0.0.0.0:1234");
+    assert_eq!(surge_config.proxies.len(), 2);
+    assert_eq!(surge_config.proxies[0].name, "Proxy_2_1");
+    assert_eq!(surge_config.proxy_groups.len(), 2);
+    assert_eq!(surge_config.rules.len(), 1);
+    assert_eq!(surge_config.url_rewrites.len(), 0);
   }
 }

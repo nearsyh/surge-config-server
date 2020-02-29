@@ -1553,6 +1553,7 @@ dependencies = [
  "actix",
  "actix-rt",
  "actix-web",
+ "futures",
  "reqwest",
  "tokio",
 ]
