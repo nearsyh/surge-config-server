@@ -9,8 +9,10 @@ use super::surge::SurgeConfiguration;
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Configuration {
   name: String,
+  generals: String,
   airports: HashMap<String, AirportConfiguration>,
   rules: String,
+  url_rewrites: String,
   group_configurations: HashMap<String, GroupConfiguration>,
 }
 
@@ -77,6 +79,8 @@ impl Configuration {
     Configuration {
       name: String::from(name),
       airports: HashMap::new(),
+      generals: String::new(),
+      url_rewrites: String::new(),
       rules: String::new(),
       group_configurations: HashMap::new(),
     }
@@ -99,8 +103,10 @@ impl Configuration {
     match Configuration::merge_surge_configurations(&surge_configurations[..]) {
       Some(mut surge_configuration) => {
         self.populate_surge_head(&mut surge_configuration);
+        self.populate_surge_generals(&mut surge_configuration);
         self.populate_surge_rules(&mut surge_configuration);
         self.populate_surge_proxy_groups(&mut surge_configuration);
+        self.populate_surge_url_rewrites(&mut surge_configuration);
         Some(surge_configuration)
       }
       _ => None,
@@ -111,11 +117,29 @@ impl Configuration {
     surge_configuration.set_head(String::from(""));
   }
 
+  fn populate_surge_generals(&self, surge_configuration: &mut SurgeConfiguration) {
+    for general in self.generals.split("\n") {
+      let clean_general = general.trim();
+      if !clean_general.is_empty() {
+        surge_configuration.add_general(String::from(clean_general));
+      }
+    } 
+  }
+
   fn populate_surge_rules(&self, surge_configuration: &mut SurgeConfiguration) {
     for rule in self.rules.split("\n") {
       let clean_rule = rule.trim();
       if !clean_rule.is_empty() {
         surge_configuration.add_rule(String::from(clean_rule));
+      }
+    }
+  }
+
+  fn populate_surge_url_rewrites(&self, surge_configuration: &mut SurgeConfiguration) {
+    for url_write in self.url_rewrites.split("\n") {
+      let clean_url_write = url_write.trim();
+      if !clean_url_write.is_empty() {
+        surge_configuration.add_rule(String::from(clean_url_write));
       }
     }
   }
