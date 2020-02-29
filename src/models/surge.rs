@@ -147,6 +147,10 @@ impl Proxy {
       _ => None,
     }
   }
+
+  pub fn get_name(&self) -> &str {
+    &self.name
+  }
 }
 
 impl ToString for Proxy {
@@ -174,7 +178,7 @@ impl ToString for Proxy {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-enum ProxyGroupType {
+pub enum ProxyGroupType {
   Select,
   UrlTest {
     url: String,
@@ -184,7 +188,19 @@ enum ProxyGroupType {
   },
 }
 
+impl Default for ProxyGroupType {
+  fn default() -> Self {
+    ProxyGroupType::UrlTest {
+      url: String::from("http://www.qualcomm.cn/generate_204"),
+      interval: 1800,
+      tolerance: 200,
+      timeout: 5
+    }
+  }
+}
+
 impl ProxyGroupType {
+
   fn from_str(type_str: &str, params_map: &BTreeMap<String, String>) -> Option<ProxyGroupType> {
     match type_str.trim() {
       "select" => Some(ProxyGroupType::Select),
@@ -234,13 +250,29 @@ impl ToString for ProxyGroupType {
 }
 
 #[derive(Debug, Clone)]
-struct ProxyGroup {
+pub struct ProxyGroup {
   name: String,
   group_type: ProxyGroupType,
   proxy_names: Vec<String>,
 }
 
 impl ProxyGroup {
+  pub fn with_name(name: &str) -> ProxyGroup {
+    ProxyGroup {
+      name: String::from(name),
+      group_type: ProxyGroupType::default(),
+      proxy_names: vec![]
+    }
+  }
+
+  pub fn add_proxy(&mut self, name: &str) {
+    self.proxy_names.push(String::from(name));
+  }
+
+  pub fn get_proxies(&self) -> &Vec<String> {
+    &self.proxy_names
+  }
+
   fn from_name_definition(name: &str, definition: &str) -> Option<ProxyGroup> {
     let components: Vec<_> = definition.split(",").collect();
     let params_map = params_map_from_strs(&components[..]);
@@ -413,9 +445,12 @@ impl SurgeConfiguration {
     self.url_rewrites.push(url_rewrite);
   }
 
-  #[cfg(test)]
   pub fn get_proxies(&self) -> &Vec<Proxy> {
     &self.proxies
+  }
+
+  pub fn get_proxy_groups(&self) -> &Vec<ProxyGroup> {
+    &self.proxy_groups
   }
 }
 
