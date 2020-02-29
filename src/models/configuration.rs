@@ -1,16 +1,25 @@
+#[macro_use]
+use serde::{Serialize, Deserialize};
+
 use futures;
 use std::collections::HashMap;
 
-use super::surge::SurgeConfiguration;
 use super::surge::ProxyGroup;
+use super::surge::SurgeConfiguration;
 
+#[derive(Serialize, Deserialize)]
 pub struct Configuration {
+  name: String,
   airports: HashMap<String, AirportConfiguration>,
   rules: String,
   group_configurations: HashMap<String, GroupConfiguration>,
 }
 
 impl Configuration {
+  pub fn get_name(&self) -> &str {
+    &self.name
+  }
+
   fn upsert_airport_configuration(&mut self, config: AirportConfiguration) {
     self.airports.insert(config.airport_id.clone(), config);
   }
@@ -26,6 +35,7 @@ impl Configuration {
   }
 }
 
+#[derive(Serialize, Deserialize)]
 struct AirportConfiguration {
   airport_id: String,
   airport_name: String,
@@ -38,6 +48,7 @@ impl AirportConfiguration {
   }
 }
 
+#[derive(Serialize, Deserialize)]
 struct GroupConfiguration {
   group_id: String,
   group_name: String,
@@ -45,8 +56,9 @@ struct GroupConfiguration {
 }
 
 impl Configuration {
-  fn empty() -> Self {
+  fn empty(name: &str) -> Self {
     Configuration {
+      name: String::from(name),
       airports: HashMap::new(),
       rules: String::new(),
       group_configurations: HashMap::new(),
@@ -73,12 +85,12 @@ impl Configuration {
         self.populate_surge_rules(&mut surge_configuration);
         self.populate_surge_proxy_groups(&mut surge_configuration);
         Some(surge_configuration)
-      },
-      _ => None
+      }
+      _ => None,
     }
   }
 
-  fn populate_surge_head(&self, surge_configuration : &mut SurgeConfiguration) {
+  fn populate_surge_head(&self, surge_configuration: &mut SurgeConfiguration) {
     surge_configuration.set_head(String::from(""));
   }
 
@@ -133,7 +145,7 @@ mod tests {
 
   #[tokio::test]
   async fn config_to_surge_configuration_works() {
-    let mut configuration = Configuration::empty();
+    let mut configuration = Configuration::empty("test");
     configuration.upsert_airport_configuration(AirportConfiguration {
       airport_id: String::from("airport_1"),
       airport_name: String::from("airport_1_name"),
@@ -147,12 +159,20 @@ mod tests {
     configuration.upsert_group_configuration(GroupConfiguration {
       group_id: String::from("group_1"),
       group_name: String::from("group_1_name"),
-      pattern: String::from("Media")
+      pattern: String::from("Media"),
     });
     let surge_configuration = configuration.fetch_surge_configuration().await.unwrap();
     assert_eq!(surge_configuration.get_proxies().len(), 4);
     assert_eq!(surge_configuration.get_proxy_groups().len(), 1);
-    assert_eq!(surge_configuration.get_proxy_groups()[0].get_proxies().len(), 1);
-    assert_eq!(surge_configuration.get_proxy_groups()[0].get_proxies()[0], "Proxy_1_1 | Media");
+    assert_eq!(
+      surge_configuration.get_proxy_groups()[0]
+        .get_proxies()
+        .len(),
+      1
+    );
+    assert_eq!(
+      surge_configuration.get_proxy_groups()[0].get_proxies()[0],
+      "Proxy_1_1 | Media"
+    );
   }
 }
