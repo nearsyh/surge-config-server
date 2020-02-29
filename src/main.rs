@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 #[macro_use]
 extern crate lazy_static;
 
-use actix_web::{get, post, put, delete, web, App, Error, HttpResponse, HttpServer, Result};
+use actix_web::middleware::cors::Cors;
+use actix_web::{delete, get, post, put, web, App, Error, HttpResponse, HttpServer, Result};
 use models::{AirportConfiguration, Configuration, GroupConfiguration};
 
 lazy_static! {
@@ -33,7 +34,7 @@ async fn delete_configuration(configuration_id: web::Path<String>) -> Result<Htt
         Some(configuration) => {
             FETCHER.delete_configuration(&configuration_id);
             Ok(HttpResponse::Ok().json(configuration))
-        },
+        }
         None => Ok(HttpResponse::NotFound().json("Configuration Not Found")),
     }
 }
@@ -138,20 +139,25 @@ async fn get_surge_configurationpath(path: web::Path<String>) -> Result<HttpResp
 async fn main() -> std::io::Result<()> {
     if let Err(_) = std::env::var("SERVER_HOST") {
         println!("Environment variable SERVER_HOST is not set.");
-        return Err(std::io::Error::new(std::io::ErrorKind::Other, "Environment variable SERVER_HOST is not set."));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Environment variable SERVER_HOST is not set.",
+        ));
     }
 
     let init_closure = || {
-        App::new()
-            .service(health)
-            .service(create_configuration)
-            .service(get_configuration)
-            .service(upsert_airport_configuration)
-            .service(upsert_group_configuration)
-            .service(update_rules_configuration)
-            .service(update_generals_configuration)
-            .service(update_url_rewrites_configuration)
-            .service(get_surge_configurationpath)
+        App::new().configure(|app| {
+            Cors::for_app(app)
+                .service(health)
+                .service(create_configuration)
+                .service(get_configuration)
+                .service(upsert_airport_configuration)
+                .service(upsert_group_configuration)
+                .service(update_rules_configuration)
+                .service(update_generals_configuration)
+                .service(update_url_rewrites_configuration)
+                .service(get_surge_configurationpath)
+        })
     };
     HttpServer::new(init_closure)
         .bind("0.0.0.0:8080")?
