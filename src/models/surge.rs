@@ -269,6 +269,7 @@ impl ProxyGroup {
     self.proxy_names.push(String::from(name));
   }
 
+  #[cfg(test)]
   pub fn get_proxies(&self) -> &Vec<String> {
     &self.proxy_names
   }
@@ -443,14 +444,11 @@ impl SurgeConfiguration {
     self.rules.push(rule);
   }
 
-  pub fn add_url_rewrite(&mut self, url_rewrite: String) {
-    self.url_rewrites.push(url_rewrite);
-  }
-
   pub fn get_proxies(&self) -> &Vec<Proxy> {
     &self.proxies
   }
 
+  #[cfg(test)]
   pub fn get_proxy_groups(&self) -> &Vec<ProxyGroup> {
     &self.proxy_groups
   }

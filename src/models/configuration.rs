@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use futures;
 use std::collections::HashMap;
@@ -124,7 +124,11 @@ impl Configuration {
   }
 
   fn populate_surge_head(&self, surge_configuration: &mut SurgeConfiguration) {
-    surge_configuration.set_head(String::from(""));
+    surge_configuration.set_head(String::from(format!(
+      "#!MANAGED_CONFIG {host}/api/v1/configurations/{config}/surge interval=43200 strict=false",
+      host = std::env::var("SERVER_HOST").unwrap(),
+      config = self.name
+    )));
   }
 
   fn populate_surge_generals(&self, surge_configuration: &mut SurgeConfiguration) {
@@ -133,7 +137,7 @@ impl Configuration {
       if !clean_general.is_empty() {
         surge_configuration.add_general(String::from(clean_general));
       }
-    } 
+    }
   }
 
   fn populate_surge_rules(&self, surge_configuration: &mut SurgeConfiguration) {

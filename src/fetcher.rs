@@ -1,8 +1,6 @@
 use super::models::Configuration;
 use jfs::Store;
 
-use std::collections::BTreeMap;
-
 pub struct Fetcher {
   db: Store,
 }
@@ -19,10 +17,6 @@ impl Fetcher {
       .db
       .save_with_id(configuration, configuration.get_name())
       .unwrap();
-  }
-
-  pub fn get_configurations(&self) -> BTreeMap<String, Configuration> {
-    self.db.all().unwrap()
   }
 
   pub fn get_configuration(&self, name: &str) -> Option<Configuration> {

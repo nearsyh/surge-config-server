@@ -136,6 +136,11 @@ async fn get_surge_configurationpath(path: web::Path<String>) -> Result<HttpResp
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
+    if let Err(_) = std::env::var("SERVER_HOST") {
+        println!("Environment variable SERVER_HOST is not set.");
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "Environment variable SERVER_HOST is not set."));
+    }
+
     let init_closure = || {
         App::new()
             .service(health)
