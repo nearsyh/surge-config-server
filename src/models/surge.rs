@@ -406,7 +406,9 @@ impl SurgeConfiguration {
   }
 
   fn proxy_as_string(&self) -> String {
-    SurgeConfiguration::vec_as_string("[Proxy]", &self.proxies)
+    let mut ret = SurgeConfiguration::vec_as_string("[Proxy]", &self.proxies);
+    ret.push_str("\nDIRECT = direct");
+    ret
   }
 
   fn proxy_group_as_string(&self) -> String {
@@ -603,6 +605,7 @@ http-listen = 0.0.0.0:8888
 
 [Proxy]
 🇭🇰 HK Standard A01 | Media | Rate 0.5x = ss,endpoint,447,encrypt-method=abc,obfs=abc,obfs-host=ddd,password=ddd,tfo=true
+DIRECT = direct
 
 [Proxy Group]
 AsianTV = select,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x
@@ -627,6 +630,7 @@ http-listen = 0.0.0.0:8888
 [Proxy]
 🇭🇰 HK Standard A01 | Media | Rate 0.5x = ss,endpoint,447,encrypt-method=abc,obfs=abc,obfs-host=ddd,password=ddd,tfo=true
 🇭🇰 HK Standard A02 | Media | Rate 0.5x = ss,endpoint,447,encrypt-method=abc,obfs=abc,obfs-host=ddd,password=ddd,tfo=true
+DIRECT = direct
 
 [Proxy Group]
 AsianTV = select,Direct,Proxy,🇭🇰 HK Standard A01 | Media | Rate 0.5x,🇭🇰 HK Standard A02 | Media | Rate 0.5x
