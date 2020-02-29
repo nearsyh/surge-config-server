@@ -8,25 +8,29 @@ pub struct Fetcher {
 }
 
 impl Fetcher {
-  fn new(path: &str) -> Fetcher {
+  pub fn new(path: &str) -> Fetcher {
     Fetcher {
       db: Store::new(path).unwrap(),
     }
   }
 
-  fn save_configuration(&self, configuration: &Configuration) {
+  pub fn save_configuration(&self, configuration: &Configuration) {
     self
       .db
       .save_with_id(configuration, configuration.get_name())
       .unwrap();
   }
 
-  fn get_configurations(&self) -> BTreeMap<String, Configuration> {
+  pub fn get_configurations(&self) -> BTreeMap<String, Configuration> {
     self.db.all().unwrap()
   }
 
-  fn get_configuration(&self, name: &str) -> Option<Configuration> {
+  pub fn get_configuration(&self, name: &str) -> Option<Configuration> {
     self.db.get(name).ok()
+  }
+
+  pub fn delete_configuration(&self, name: &str) {
+    self.db.delete(name).unwrap()
   }
 }
 

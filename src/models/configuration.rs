@@ -23,8 +23,8 @@ impl Configuration {
     self.airports.insert(config.airport_id.clone(), config);
   }
 
-  pub fn update_rules(&mut self, rules: String) {
-    self.rules = rules;
+  pub fn update_rules(&mut self, rules: &str) {
+    self.rules = String::from(rules);
   }
 
   pub fn upsert_group_configuration(&mut self, config: GroupConfiguration) {
@@ -84,7 +84,7 @@ impl Configuration {
 }
 
 impl Configuration {
-  async fn fetch_surge_configuration(&self) -> Option<SurgeConfiguration> {
+  pub async fn fetch_surge_configuration(&self) -> Option<SurgeConfiguration> {
     let config_futures: Vec<_> = self
       .airports
       .values()

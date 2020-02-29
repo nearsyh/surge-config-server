@@ -131,7 +131,7 @@ impl Proxy {
 
   fn from_name_definition(name: &str, definition: &str) -> Option<Proxy> {
     let def_parts: Vec<_> = definition.split(",").collect();
-    if def_parts[0].trim() == "direct" {
+    if def_parts.len() < 3 {
       return None;
     }
     match &def_parts[0..3] {
