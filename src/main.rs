@@ -75,17 +75,45 @@ async fn upsert_group_configuration(
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct RulesConfiguration {
-    rules: String,
+struct TextConfiguration {
+    text: String,
 }
 
 #[post("/api/v1/configurations/{config_id}/rules")]
-async fn upsert_rules_configuration(
+async fn update_rules_configuration(
     path: web::Path<String>,
-    rules: web::Json<RulesConfiguration>,
+    text: web::Json<TextConfiguration>,
 ) -> Result<HttpResponse, Error> {
     if let Some(mut configuration) = FETCHER.get_configuration(&path) {
-        configuration.update_rules(&rules.rules);
+        configuration.update_rules(&text.text);
+        FETCHER.save_configuration(&configuration);
+        Ok(HttpResponse::Ok().json(configuration))
+    } else {
+        Ok(HttpResponse::NotFound().json("Configuration Not Found"))
+    }
+}
+
+#[post("/api/v1/configurations/{config_id}/generals")]
+async fn update_generals_configuration(
+    path: web::Path<String>,
+    text: web::Json<TextConfiguration>,
+) -> Result<HttpResponse, Error> {
+    if let Some(mut configuration) = FETCHER.get_configuration(&path) {
+        configuration.update_generals(&text.text);
+        FETCHER.save_configuration(&configuration);
+        Ok(HttpResponse::Ok().json(configuration))
+    } else {
+        Ok(HttpResponse::NotFound().json("Configuration Not Found"))
+    }
+}
+
+#[post("/api/v1/configurations/{config_id}/url_rewrites")]
+async fn update_url_rewrites_configuration(
+    path: web::Path<String>,
+    text: web::Json<TextConfiguration>,
+) -> Result<HttpResponse, Error> {
+    if let Some(mut configuration) = FETCHER.get_configuration(&path) {
+        configuration.update_url_rewrites(&text.text);
         FETCHER.save_configuration(&configuration);
         Ok(HttpResponse::Ok().json(configuration))
     } else {
@@ -115,7 +143,9 @@ async fn main() -> std::io::Result<()> {
             .service(get_configuration)
             .service(upsert_airport_configuration)
             .service(upsert_group_configuration)
-            .service(upsert_rules_configuration)
+            .service(update_rules_configuration)
+            .service(update_generals_configuration)
+            .service(update_url_rewrites_configuration)
             .service(get_surge_configurationpath)
     };
     HttpServer::new(init_closure)

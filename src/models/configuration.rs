@@ -29,6 +29,14 @@ impl Configuration {
     self.rules = String::from(rules);
   }
 
+  pub fn update_generals(&mut self, generals: &str) {
+    self.generals = String::from(generals);
+  }
+
+  pub fn update_url_rewrites(&mut self, url_rewrites: &str) {
+    self.url_rewrites = String::from(url_rewrites);
+  }
+
   pub fn upsert_group_configuration(&mut self, config: GroupConfiguration) {
     self
       .group_configurations
@@ -48,6 +56,7 @@ impl AirportConfiguration {
     SurgeConfiguration::from_url(&self.url).await
   }
 
+  #[cfg(test)]
   pub fn new(id: &str, name: &str, url: &str) -> AirportConfiguration {
     AirportConfiguration {
       airport_id: String::from(id),
@@ -65,6 +74,7 @@ pub struct GroupConfiguration {
 }
 
 impl GroupConfiguration {
+  #[cfg(test)]
   pub fn new(id: &str, name: &str, pattern: &str) -> GroupConfiguration {
     GroupConfiguration {
       group_id: String::from(id),
