@@ -12,6 +12,7 @@ reqwest = '0.10'
 futures = '0.3.4'
 regex = '1'
 jfs = '0.6'
+tempdir = '0.3'
 
 [dependencies.serde]
 version = '1.0'
