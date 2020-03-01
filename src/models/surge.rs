@@ -412,7 +412,7 @@ impl SurgeConfiguration {
 
   fn proxy_as_string(&self) -> String {
     let mut ret = SurgeConfiguration::vec_as_string("[Proxy]", &self.proxies);
-    ret.push_str("\nDIRECT = direct");
+    ret.push_str("\nDIRECT = direct\nREJECT=reject");
     ret
   }
 
