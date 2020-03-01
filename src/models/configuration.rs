@@ -125,7 +125,7 @@ impl Configuration {
 
   fn populate_surge_head(&self, surge_configuration: &mut SurgeConfiguration) {
     surge_configuration.set_head(String::from(format!(
-      "#!MANAGED_CONFIG {host}/api/v1/configurations/{config}/surge interval=43200 strict=false",
+      "#!MANAGED-CONFIG {host}/api/v1/configurations/{config}/surge interval=43200 strict=false",
       host = std::env::var("SERVER_HOST").unwrap_or(String::from("localhost:8080")),
       config = self.name
     )));
