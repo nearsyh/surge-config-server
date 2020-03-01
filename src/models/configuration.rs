@@ -226,6 +226,7 @@ mod tests {
       "group_1_name",
       "Media",
     ));
+    configuration.update_url_rewrites("^https?://(www.)?g.cn https://www.google.com 302");
     let surge_configuration = configuration.fetch_surge_configuration().await.unwrap();
     assert_eq!(surge_configuration.get_proxies().len(), 4);
     assert_eq!(surge_configuration.get_proxy_groups().len(), 3);
