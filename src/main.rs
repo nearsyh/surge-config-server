@@ -29,7 +29,10 @@ async fn create_configuration(configuration_id: web::Path<String>) -> Result<Htt
 }
 
 #[post("/api/v1/configurations/{id}")]
-async fn update_configuration(configuration_id: web::Path<String>, config: web::Json<Configuration>) -> Result<HttpResponse, Error> {
+async fn update_configuration(
+    configuration_id: web::Path<String>,
+    config: web::Json<Configuration>,
+) -> Result<HttpResponse, Error> {
     match FETCHER.get_configuration(&configuration_id) {
         Some(_) => {
             FETCHER.save_configuration(&config);
@@ -158,7 +161,7 @@ async fn main() -> std::io::Result<()> {
 
     let init_closure = || {
         App::new()
-            .wrap(Cors::new().finish())
+            .wrap(Cors::new().send_wildcard().finish())
             .service(health)
             .service(create_configuration)
             .service(get_configuration)
