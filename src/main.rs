@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[macro_use]
 extern crate lazy_static;
 
-use actix_web::middleware::cors::Cors;
+use actix_cors::Cors;
 use actix_web::{delete, get, post, put, web, App, Error, HttpResponse, HttpServer, Result};
 use models::{AirportConfiguration, Configuration, GroupConfiguration};
 
@@ -26,6 +26,17 @@ async fn create_configuration(configuration_id: web::Path<String>) -> Result<Htt
     let configuration = Configuration::empty(&configuration_id);
     FETCHER.save_configuration(&configuration);
     Ok(HttpResponse::Ok().json(configuration))
+}
+
+#[post("/api/v1/configurations/{id}")]
+async fn update_configuration(configuration_id: web::Path<String>, config: web::Json<Configuration>) -> Result<HttpResponse, Error> {
+    match FETCHER.get_configuration(&configuration_id) {
+        Some(_) => {
+            FETCHER.save_configuration(&config);
+            Ok(HttpResponse::Ok().json(config.into_inner()))
+        }
+        None => Ok(HttpResponse::NotFound().json("Configuration Not Found")),
+    }
 }
 
 #[delete("/api/v1/configurations/{id}")]
@@ -146,18 +157,17 @@ async fn main() -> std::io::Result<()> {
     }
 
     let init_closure = || {
-        App::new().configure(|app| {
-            Cors::for_app(app)
-                .service(health)
-                .service(create_configuration)
-                .service(get_configuration)
-                .service(upsert_airport_configuration)
-                .service(upsert_group_configuration)
-                .service(update_rules_configuration)
-                .service(update_generals_configuration)
-                .service(update_url_rewrites_configuration)
-                .service(get_surge_configurationpath)
-        })
+        App::new()
+            .wrap(Cors::new().finish())
+            .service(health)
+            .service(create_configuration)
+            .service(get_configuration)
+            .service(upsert_airport_configuration)
+            .service(upsert_group_configuration)
+            .service(update_rules_configuration)
+            .service(update_generals_configuration)
+            .service(update_url_rewrites_configuration)
+            .service(get_surge_configurationpath)
     };
     HttpServer::new(init_closure)
         .bind("0.0.0.0:8080")?
