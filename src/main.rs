@@ -162,6 +162,7 @@ async fn main() -> std::io::Result<()> {
             .service(health)
             .service(create_configuration)
             .service(get_configuration)
+            .service(update_configuration)
             .service(upsert_airport_configuration)
             .service(upsert_group_configuration)
             .service(update_rules_configuration)
