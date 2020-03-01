@@ -159,6 +159,17 @@ impl Configuration {
   }
 
   fn populate_surge_proxy_groups(&self, surge_configuration: &mut SurgeConfiguration) {
+    let mut auto_group = ProxyGroup::with_name("Auto");
+    let mut all_proxy = ProxyGroup::with_name("Proxy");
+    all_proxy.add_proxy("Auto");
+    all_proxy.add_proxy("DIRECT");
+    for proxy in surge_configuration.get_proxies() {
+      auto_group.add_proxy(proxy.get_name());
+      all_proxy.add_proxy(proxy.get_name());
+    }
+    surge_configuration.add_proxy_group(all_proxy);
+    surge_configuration.add_proxy_group(auto_group);
+
     for (group_name, group_config) in self.group_configurations.iter() {
       let mut group = ProxyGroup::with_name(group_name);
       let regex = regex::Regex::new(&group_config.pattern).unwrap();
