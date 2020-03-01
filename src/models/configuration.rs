@@ -166,9 +166,7 @@ impl Configuration {
     all_proxy.add_proxy("DIRECT");
     for proxy in surge_configuration.get_proxies() {
       auto_group.add_proxy(proxy.get_name());
-      all_proxy.add_proxy(proxy.get_name());
     }
-    surge_configuration.add_proxy_group(all_proxy);
     surge_configuration.add_proxy_group(auto_group);
 
     for (group_name, group_config) in self.group_configurations.iter() {
@@ -180,7 +178,12 @@ impl Configuration {
         }
       }
       surge_configuration.add_proxy_group(group);
+      all_proxy.add_proxy(group_name);
     }
+    for proxy in surge_configuration.get_proxies() {
+      all_proxy.add_proxy(proxy.get_name());
+    }
+    surge_configuration.add_proxy_group(all_proxy);
   }
 
   fn merge_surge_configurations(
