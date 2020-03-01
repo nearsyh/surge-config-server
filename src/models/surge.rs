@@ -265,6 +265,10 @@ impl ProxyGroup {
     }
   }
 
+  pub fn set_type(&mut self, proxy_type: ProxyGroupType) {
+    self.group_type = proxy_type;
+  }
+
   pub fn add_proxy(&mut self, name: &str) {
     self.proxy_names.push(String::from(name));
   }
@@ -444,6 +448,10 @@ impl SurgeConfiguration {
     self.rules.push(rule);
   }
 
+  pub fn add_url_rewrite(&mut self, url_rewrite: String) {
+    self.url_rewrites.push(url_rewrite);
+  }
+
   pub fn get_proxies(&self) -> &Vec<Proxy> {
     &self.proxies
   }
@@ -451,6 +459,11 @@ impl SurgeConfiguration {
   #[cfg(test)]
   pub fn get_proxy_groups(&self) -> &Vec<ProxyGroup> {
     &self.proxy_groups
+  }
+  
+  #[cfg(test)]
+  pub fn get_url_rewrites(&self) -> &Vec<String> {
+    &self.url_rewrites
   }
 }
 

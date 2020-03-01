@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use futures;
 use std::collections::HashMap;
 
-use super::surge::ProxyGroup;
+use super::surge::{ProxyGroup, ProxyGroupType};
 use super::surge::SurgeConfiguration;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -126,7 +126,7 @@ impl Configuration {
   fn populate_surge_head(&self, surge_configuration: &mut SurgeConfiguration) {
     surge_configuration.set_head(String::from(format!(
       "#!MANAGED_CONFIG {host}/api/v1/configurations/{config}/surge interval=43200 strict=false",
-      host = std::env::var("SERVER_HOST").unwrap(),
+      host = std::env::var("SERVER_HOST").unwrap_or(String::from("localhost:8080")),
       config = self.name
     )));
   }
@@ -153,7 +153,7 @@ impl Configuration {
     for url_write in self.url_rewrites.split("\n") {
       let clean_url_write = url_write.trim();
       if !clean_url_write.is_empty() {
-        surge_configuration.add_rule(String::from(clean_url_write));
+        surge_configuration.add_url_rewrite(String::from(clean_url_write));
       }
     }
   }
@@ -161,6 +161,7 @@ impl Configuration {
   fn populate_surge_proxy_groups(&self, surge_configuration: &mut SurgeConfiguration) {
     let mut auto_group = ProxyGroup::with_name("Auto");
     let mut all_proxy = ProxyGroup::with_name("Proxy");
+    all_proxy.set_type(ProxyGroupType::Select);
     all_proxy.add_proxy("Auto");
     all_proxy.add_proxy("DIRECT");
     for proxy in surge_configuration.get_proxies() {
@@ -215,7 +216,7 @@ mod tests {
     configuration.upsert_airport_configuration(AirportConfiguration::new(
       "airport_1",
       "airport_1_name",
-      "https://gist.githubusercontent.com/nearsyh/b581e7fa0f007d104336fad5ac124be7/raw/94c9c9b4ad024f6874ad7310d5a24fa1d79dc2c9/surge_config_airport_1"));
+      "https://gist.githubusercontent.com/nearsyh/b581e7fa0f007d104336fad5ac124be7/raw/48a8b711dce7cc09b4fcc6f328692b07619a1687/surge_config_airport_1"));
     configuration.upsert_airport_configuration(AirportConfiguration::new(
       "airport_2",
       "airport_2_name",
@@ -227,16 +228,20 @@ mod tests {
     ));
     let surge_configuration = configuration.fetch_surge_configuration().await.unwrap();
     assert_eq!(surge_configuration.get_proxies().len(), 4);
-    assert_eq!(surge_configuration.get_proxy_groups().len(), 1);
+    assert_eq!(surge_configuration.get_proxy_groups().len(), 3);
     assert_eq!(
-      surge_configuration.get_proxy_groups()[0]
+      surge_configuration.get_proxy_groups()[2]
         .get_proxies()
         .len(),
       1
     );
     assert_eq!(
-      surge_configuration.get_proxy_groups()[0].get_proxies()[0],
+      surge_configuration.get_proxy_groups()[2].get_proxies()[0],
       "Proxy_1_1 | Media"
+    );
+    assert_eq!(
+      surge_configuration.get_url_rewrites().len(),
+      1
     );
   }
 }
