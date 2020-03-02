@@ -14,6 +14,7 @@ pub struct Configuration {
   rules: String,
   url_rewrites: String,
   group_configurations: HashMap<String, GroupConfiguration>,
+  proxies: Vec<String>,
 }
 
 impl Configuration {
@@ -93,6 +94,7 @@ impl Configuration {
       url_rewrites: String::new(),
       rules: String::new(),
       group_configurations: HashMap::new(),
+      proxies: vec![],
     }
   }
 }
@@ -112,6 +114,7 @@ impl Configuration {
       .collect();
     match Configuration::merge_surge_configurations(&surge_configurations[..]) {
       Some(mut surge_configuration) => {
+        self.add_proxies(&mut surge_configuration);
         self.populate_surge_head(&mut surge_configuration);
         self.populate_surge_generals(&mut surge_configuration);
         self.populate_surge_rules(&mut surge_configuration);
@@ -120,6 +123,12 @@ impl Configuration {
         Some(surge_configuration)
       }
       _ => None,
+    }
+  }
+
+  fn add_proxies(&self, surge_configuration: &mut SurgeConfiguration) {
+    for proxy_str in &self.proxies {
+      surge_configuration.add_proxy(proxy_str);
     }
   }
 

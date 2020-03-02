@@ -440,6 +440,12 @@ impl SurgeConfiguration {
     self.general.push(general);
   }
 
+  pub fn add_proxy(&mut self, proxy_str: &str) {
+    if let Some(proxy) = Proxy::from_str(proxy_str) {
+      self.proxies.push(proxy);
+    }
+  }
+
   pub fn add_proxy_group(&mut self, proxy_group: ProxyGroup) {
     self.proxy_groups.push(proxy_group);
   }
