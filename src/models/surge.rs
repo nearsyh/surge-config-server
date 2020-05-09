@@ -71,6 +71,7 @@ fn is_comment(line: &str) -> bool {
 
 #[derive(Debug, Clone)]
 pub struct SurgeConfiguration {
+  name: String,
   head: String,
   general: Vec<String>,
   proxies: Vec<Proxy>,
@@ -81,6 +82,7 @@ pub struct SurgeConfiguration {
 
 #[derive(Debug, Clone)]
 pub struct Proxy {
+  source: String,
   name: String,
   proto: String,
   host: String,
@@ -117,6 +119,7 @@ impl Proxy {
 
     match port_str.trim().parse::<u32>() {
       Ok(port) => Some(Proxy {
+        source: String::from(""),
         name: String::from(name.trim()),
         proto: String::from(proto.trim()),
         host: String::from(host.trim()),
@@ -148,7 +151,11 @@ impl Proxy {
     }
   }
 
-  pub fn get_name(&self) -> &str {
+  pub fn get_source(&self) -> &String {
+    &self.source
+  }
+
+  pub fn get_name(&self) -> &String {
     &self.name
   }
 }
@@ -325,6 +332,7 @@ impl ToString for ProxyGroup {
 impl Default for SurgeConfiguration {
   fn default() -> Self {
     SurgeConfiguration {
+      name: String::from(""),
       head: String::from(""),
       general: vec![],
       proxies: vec![],
@@ -432,6 +440,10 @@ impl SurgeConfiguration {
     self.proxies.append(&mut config.proxies.clone());
   }
 
+  pub fn set_name(&mut self, name: String) {
+    self.name = name;
+  }
+
   pub fn set_head(&mut self, head: String) {
     self.head = head;
   }
@@ -442,6 +454,7 @@ impl SurgeConfiguration {
 
   pub fn add_proxy(&mut self, proxy_str: &str) {
     if let Some(proxy) = Proxy::from_str(proxy_str) {
+      proxy.source = self.name.clone();
       self.proxies.push(proxy);
     }
   }
@@ -539,6 +552,7 @@ mod test {
     params.insert(String::from("abd"), String::from("def"));
     params.insert(String::from("abc"), String::from("def"));
     let proxy = Proxy {
+      source: String::from(""),
       name: String::from("https proxy"),
       proto: String::from("https"),
       host: String::from("www.a.com"),

@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use futures;
 use std::collections::HashMap;
 
-use super::surge::{ProxyGroup, ProxyGroupType};
 use super::surge::SurgeConfiguration;
+use super::surge::{ProxyGroup, ProxyGroupType};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Configuration {
@@ -54,7 +54,12 @@ pub struct AirportConfiguration {
 
 impl AirportConfiguration {
   async fn fetch_surge_configuration(&self) -> Option<SurgeConfiguration> {
-    SurgeConfiguration::from_url(&self.url).await
+    if let Some(surge) = SurgeConfiguration::from_url(&self.url).await {
+      surge.set_name(self.airport_name);
+      Some(surge)
+    } else {
+      None
+    }
   }
 
   #[cfg(test)]
@@ -71,7 +76,8 @@ impl AirportConfiguration {
 pub struct GroupConfiguration {
   group_id: String,
   group_name: String,
-  pattern: String,
+  pattern_map: HashMap<String, String>,
+  proxies_map: HashMap<String, Vec<String>>,
 }
 
 impl GroupConfiguration {
@@ -80,7 +86,8 @@ impl GroupConfiguration {
     GroupConfiguration {
       group_id: String::from(id),
       group_name: String::from(name),
-      pattern: String::from(pattern),
+      pattern_map: HashMap::new(),
+      proxies_map: HashMap::new(),
     }
   }
 }
@@ -180,10 +187,22 @@ impl Configuration {
 
     for (group_name, group_config) in self.group_configurations.iter() {
       let mut group = ProxyGroup::with_name(group_name);
-      let regex = regex::Regex::new(&group_config.pattern).unwrap();
+      let mut regex_map = HashMap::new();
+      for (ref name, ref pattern) in &group_config.pattern_map {
+        regex_map.insert(name, regex::Regex::new(&pattern).unwrap());
+      }
       for proxy in surge_configuration.get_proxies() {
-        if regex.is_match(proxy.get_name()) {
-          group.add_proxy(proxy.get_name());
+        if let Some(ref list) = group_config.proxies_map.get(group_name) {
+          if list.contains(proxy.get_name()) {
+            group.add_proxy(proxy.get_name());
+            continue;
+          }
+        }
+        if let Some(regex) = regex_map.get(proxy.get_source()) {
+          if regex.is_match(proxy.get_name()) {
+            group.add_proxy(proxy.get_name());
+            continue;
+          }
         }
       }
       surge_configuration.add_proxy_group(group);
@@ -252,9 +271,6 @@ mod tests {
       surge_configuration.get_proxy_groups()[2].get_proxies()[0],
       "Proxy_1_1 | Media"
     );
-    assert_eq!(
-      surge_configuration.get_url_rewrites().len(),
-      1
-    );
+    assert_eq!(surge_configuration.get_url_rewrites().len(), 1);
   }
 }
